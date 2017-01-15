@@ -3,10 +3,20 @@ unit uSList;
 interface
 
 uses
-  SysUtils, Types, uSExpression, uSPair;
+  SysUtils, Types, Generics.Collections,
+
+  uSExpression, uSPair;
 
 type
+  TFunctionRec = record
+    Name: string;
+    Arguments: string;
+    Body: string;
+  end;
+
   TSList = class(TSPair)
+  private class var
+    RegisteredFunctions: TDictionary<string, TFunctionRec>;
   private
     FFunction: TSExpression;
     FArguments: TArray<TSExpression>;
@@ -19,6 +29,7 @@ type
     function FunctionNameIsRegistered(const AFunctionName: string): Boolean;
     function GetArgumentsNumberForRegisteredFunction(const AFunctionName: string): Integer;
     procedure FreeFunctionAndArguments;
+    function FunctionNameIs(AText: string): Boolean;
   protected
     procedure InitHeadAndTail(const AText: string); override;
   public
@@ -124,7 +135,7 @@ end;
 
 function TSList.Evaluate: Variant;
 begin
-
+  if FunctionNameIs('defun') then
 end;
 
 procedure TSList.CheckFunctionNameAndArgumentsNumber(const AFunctionName: string;
@@ -155,9 +166,20 @@ begin
   Result := 0;
 end;
 
+function TSList.FunctionNameIs(AText: string): Boolean;
+begin
+  Result := SameText(GetTextBeforeEvaluation(FFunction.Text), AText);
+end;
+
 function TSList.GetFunctionName(): string;
 begin
-  Result := FFunction.Text;
+  Result := GetTextBeforeEvaluation(FFunction.Text);
 end;
+
+initialization
+  TSList.RegisteredFunctions := TDictionary<string, TFunctionRec>.Create;
+
+finalization
+  FreeAndNil(TSList.RegisteredFunctions);
 
 end.
