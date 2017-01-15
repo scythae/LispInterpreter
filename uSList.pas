@@ -22,7 +22,6 @@ type
     FArguments: TArray<TSExpression>;
     function GetFunctionName(): string;
     constructor CreateActual(Text: string);
-    destructor Destroy();
     procedure InitFunctionAndArguments();
     procedure CheckFunctionNameAndArgumentsNumber(const AFunctionName: string;
       const ArgumentsNumber: Integer);
@@ -30,12 +29,15 @@ type
     function GetArgumentsNumberForRegisteredFunction(const AFunctionName: string): Integer;
     procedure FreeFunctionAndArguments;
     function FunctionNameIs(AText: string): Boolean;
+    procedure DefineFunction;
   protected
+    class function GetTextBeforeEvaluation(const AText: string): string; override;
     procedure InitHeadAndTail(const AText: string); override;
   public
     function TextAsPair(): string;
   public
     function Evaluate(): Variant; override;
+    destructor Destroy(); override;
   end;
 
 implementation
@@ -43,7 +45,7 @@ implementation
 constructor TSList.CreateActual(Text: string);
 begin
   inherited CreateActual(Text);
-
+  -- {TODO why cannot enter here from TSExpression.CreateExp}
   try
     InitFunctionAndArguments();
   except
@@ -136,6 +138,18 @@ end;
 function TSList.Evaluate: Variant;
 begin
   if FunctionNameIs('defun') then
+    DefineFunction();
+end;
+
+procedure TSList.DefineFunction();
+var
+  FunctionRec: TFunctionRec;
+begin
+  FunctionRec.Name := GetFunctionName();
+  FunctionRec.Arguments := GetTextElementByIndex(Text, 3);
+  FunctionRec.Body := GetTextElementByIndex(Text, 4);
+
+  RegisteredFunctions.AddOrSetValue(FunctionRec.Name, FunctionRec);
 end;
 
 procedure TSList.CheckFunctionNameAndArgumentsNumber(const AFunctionName: string;
@@ -146,7 +160,8 @@ begin
   if not FunctionNameIsRegistered(AFunctionName) then
     RaiseException('Function is not defined: ' + AFunctionName);
 
-  if ArgumentsNumber <> GetArgumentsNumberForRegisteredFunction(AFunctionName) then
+  RegisteredArgumentsNumber := GetArgumentsNumberForRegisteredFunction(AFunctionName);
+  if RegisteredArgumentsNumber <> ArgumentsNumber then
     RaiseException(
       Format(
         'Function is called with wrong number of arguments:'#13#10 +
@@ -158,7 +173,7 @@ end;
 
 function TSList.FunctionNameIsRegistered(const AFunctionName: string): Boolean;
 begin
-  Result := False;
+  Result := RegisteredFunctions.ContainsKey(GetTextBeforeEvaluation(AFunctionName));
 end;
 
 function TSList.GetArgumentsNumberForRegisteredFunction(const AFunctionName: string): Integer;
@@ -174,6 +189,11 @@ end;
 function TSList.GetFunctionName(): string;
 begin
   Result := GetTextBeforeEvaluation(FFunction.Text);
+end;
+
+class function TSList.GetTextBeforeEvaluation(const AText: string): string;
+begin
+  Result := inherited.ToLower();
 end;
 
 initialization

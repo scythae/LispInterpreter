@@ -84,6 +84,12 @@ begin
   CheckExpression('( . 2)', TSWrong);
   CheckExpression('(1 . 2', TSWrong);
   CheckExpression('(name . "Анатолий")', TSPair);
+
+  CheckExpression('(1 2)', TSList);
+  CheckExpression('((1 2) (2))', TSList);
+  CheckExpression('( (1.) (2.3 4 5 () 2))', TSList);
+  CheckExpression('(defun sum (a b) (+ a b))', TSList);
+  CheckExpression('(defun sum(a b)(+ a b))', TSWrong);
 end;
 
 procedure TMainTest.Test_ListToPair();
