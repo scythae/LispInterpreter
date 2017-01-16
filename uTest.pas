@@ -40,9 +40,11 @@ end;
 
 procedure TMainTest.Test;
 begin
+  TSExpression.TestingModeBegin();
   Test_CheckExpressionsSyntax();
   Test_ListToPair();
   Test_EvaluateExpressions();
+  TSExpression.TestingModeEnd()
 end;
 
 procedure TMainTest.Test_CheckExpressionsSyntax();

@@ -11,6 +11,7 @@ type
   private
     FText: string;
     procedure SetText(AText: string); virtual;
+    class constructor Create();
     class function IsNil(const AText: string): Boolean; static;
     class function IsPair(const AText: string): Boolean; static;
     class function IsList(const AText: string): Boolean; static;
@@ -25,6 +26,8 @@ type
     Char_PairDelimiter = '.';
     Char_ExpressionQuote = '''';
     Char_AtomstringQuote = '"';
+  protected class var
+    Testing: Boolean;
   protected
     constructor CreateActual(AText: string); virtual;
     class function ToElements(const AText: string): TArray<string>; static;
@@ -35,7 +38,9 @@ type
   public
     constructor Create();
     class function CreateExp(const AText: string): TSExpression;
-    function Evaluate(): Variant; virtual;  
+    function Evaluate(): Variant; virtual;
+    class procedure TestingModeBegin(); static;
+    class procedure TestingModeEnd(); static;
     property Text: string read FText write SetText;
   end;
 
@@ -53,6 +58,11 @@ uses
 constructor TSExpression.Create();
 begin
   RaiseException('Use "TSExpression.CreateExp" method instead of default constructor.');
+end;
+
+class constructor TSExpression.Create;
+begin
+  Testing := False;
 end;
 
 constructor TSExpression.CreateActual(AText: string);
@@ -175,6 +185,16 @@ end;
 class function TSExpression.FirstAndLastSymbolsAreParentheses(const AText: string): Boolean;
 begin
   Result := AText.StartsWith(Char_OpeningParenthesis) and AText.EndsWith(Char_ClosingParenthesis);
+end;
+
+class procedure TSExpression.TestingModeBegin();
+begin
+  Testing := True;
+end;
+
+class procedure TSExpression.TestingModeEnd();
+begin
+  Testing := False;
 end;
 
 class function TSExpression.TextWithoutFirstAndLastSymbols(const AText: string): string;

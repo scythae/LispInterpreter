@@ -60,7 +60,8 @@ var
 
   procedure InitFunction();
   begin
-    CheckFunctionNameAndArgumentsNumber(Elements[0], Length(Elements) - 1);
+    if not Testing then
+      CheckFunctionNameAndArgumentsNumber(Elements[0], Length(Elements) - 1);
     FFunction := TSExpression.CreateExp(Elements[0]);
   end;
 
@@ -110,7 +111,7 @@ var
     Head := Elements[0];
     Tail :=
       Char_OpeningParenthesis +
-      string.Join(Char_Space, Elements, 1, Length(Elements)) +
+      string.Join(Char_Space, Elements, 1, Length(Elements) - 1) +
       Char_ClosingParenthesis;
 
     Result :=

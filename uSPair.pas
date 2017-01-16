@@ -10,21 +10,21 @@ type
   private
     FHead: TSExpression;
     FTail: TSExpression;
-    constructor CreateActual(AText: string);
-    destructor Destroy();
   protected
+    constructor CreateActual(AText: string); override;
     procedure InitHeadAndTail(const AText: string); virtual;
     function GetTextElementByIndex(const AText: string; const Index: Integer): string;
   public
     property Head: TSExpression read FHead;
     property Tail: TSExpression read FTail;
+    destructor Destroy(); override;
   end;
 
 implementation
 
 constructor TSPair.CreateActual(AText: string);
 begin
-  inherited CreateActual(Text);
+  inherited CreateActual(AText);
 
   try
     InitHeadAndTail(AText);
