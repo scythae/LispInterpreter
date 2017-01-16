@@ -26,7 +26,7 @@ type
     Char_ExpressionQuote = '''';
     Char_AtomstringQuote = '"';
   protected
-    constructor CreateActual(AText: string);
+    constructor CreateActual(AText: string); virtual;
     class function ToElements(const AText: string): TArray<string>; static;
     class function GetTextBeforeEvaluation(const AText: string): string; virtual;
     class procedure RaiseException(ExceptionText: string);
@@ -58,12 +58,7 @@ end;
 constructor TSExpression.CreateActual(AText: string);
 begin
   inherited Create();
-  try
-    Self.Text := AText;
-  except
-    Free();
-    raise;
-  end;
+  Self.Text := AText;
 end;
 
 class function TSExpression.CreateExp(const AText: string): TSExpression;

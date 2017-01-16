@@ -15,6 +15,7 @@ uses
 {$R *.res}
 
 begin
+  ReportMemoryLeaksOnShutdown := True;
   FormatSettings.DecimalSeparator := '.';
 
   Application.Initialize;

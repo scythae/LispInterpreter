@@ -21,7 +21,6 @@ type
     FFunction: TSExpression;
     FArguments: TArray<TSExpression>;
     function GetFunctionName(): string;
-    constructor CreateActual(Text: string);
     procedure InitFunctionAndArguments();
     procedure CheckFunctionNameAndArgumentsNumber(const AFunctionName: string;
       const ArgumentsNumber: Integer);
@@ -31,6 +30,7 @@ type
     function FunctionNameIs(AText: string): Boolean;
     procedure DefineFunction;
   protected
+    constructor CreateActual(Text: string); override;
     class function GetTextBeforeEvaluation(const AText: string): string; override;
     procedure InitHeadAndTail(const AText: string); override;
   public
@@ -45,13 +45,7 @@ implementation
 constructor TSList.CreateActual(Text: string);
 begin
   inherited CreateActual(Text);
-  -- {TODO why cannot enter here from TSExpression.CreateExp}
-  try
-    InitFunctionAndArguments();
-  except
-    Free();
-    raise;
-  end;
+  InitFunctionAndArguments();
 end;
 
 destructor TSList.Destroy();
