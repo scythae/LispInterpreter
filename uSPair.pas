@@ -49,7 +49,7 @@ end;
 function TSPair.GetTextElementByIndex(const AText: string;
   const Index: Integer): string;
 var
-  Elements: TArray<string>;
+  Elements: TStringArray;
 begin
   Elements := ToElements(AText);
   try
