@@ -1,7 +1,6 @@
 object frMain: TfrMain
-  Left = 0
-  Top = 0
-  Align = alCustom
+  Left = 343
+  Top = 77
   Caption = 'frMain'
   ClientHeight = 544
   ClientWidth = 514
@@ -12,6 +11,7 @@ object frMain: TfrMain
   Font.Name = 'Tahoma'
   Font.Style = []
   OldCreateOrder = False
+  Position = poDesigned
   OnCreate = FormCreate
   OnDestroy = FormDestroy
   PixelsPerInch = 96

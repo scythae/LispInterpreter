@@ -29,6 +29,8 @@ type
     Char_PairDelimiter = '.';
     Char_ExpressionQuote = '''';
     Char_AtomstringQuote = '"';
+    String_AtomNil = 'Nil';
+    String_AtomTrue = 'T';
   protected
     constructor CreateActual(AText: string); virtual;
     class function ToElements(const AText: string): TStringArray; static;

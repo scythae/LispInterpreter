@@ -68,7 +68,6 @@ begin
   CheckExpression('A A', TSWrong);
   CheckExpression('A(', TSWrong);
   CheckExpression('A''B', TSWrong);
-  CheckExpression('()', TSAtom);
   CheckExpression('"Проба пера"', TSAtom);
   CheckExpression('"Проба "пера""', TSWrong);
   CheckExpression('"Проба ""пера"""', TSAtom);
@@ -85,6 +84,7 @@ begin
   CheckExpression('(1 . 2', TSWrong);
   CheckExpression('(name . "Анатолий")', TSPair);
 
+  CheckExpression('()', TSList);
   CheckExpression('(1 2)', TSList);
   CheckExpression('((1 2) (2))', TSList);
   CheckExpression('( (1.) (2.3 4 5 () 2))', TSList);
@@ -93,33 +93,46 @@ begin
 end;
 
 procedure TMainTest.Test_ListToPair();
-  procedure CheckListToPair(const Text: string);
+  procedure CheckListToPair(const GivenList, ExpectedPair: string);
   var
-    TextAsPair_local: string;
+    EvaluatedPair: string;
   begin
-    Assert(TextIsClass(Text, TSList), 'Expression is not List: ' + Text);
-    TryCreateAndFreeExpression(Text);
+    Assert(TextIsClass(GivenList, TSList), 'Expression is not List: ' + GivenList);
+    TryCreateAndFreeExpression(GivenList);
 
-    with TSList.CreateExp(Text) as TSList do
+    with TSList.CreateExp(GivenList) as TSList do
     try
-      TextAsPair_local := TextAsPair;
+      EvaluatedPair := TextAsPair;
     finally
       Free();
     end;
 
     Assert(
-      TextIsClass(TextAsPair_local, TSPair),
-      'Expression cannot be converted to Pair: ' + Text
+      TextIsClass(EvaluatedPair, TSPair),
+      'Expression cannot be converted to Pair: ' + GivenList
     );
-    TryCreateAndFreeExpression(TextAsPair_local);
+    TryCreateAndFreeExpression(EvaluatedPair);
 
-    Log(Text + '->' + TextAsPair_local);
+    Assert(
+      EvaluatedPair = ExpectedPair,
+      Format(
+        'Result of conversion doesn''t match to expected Pair.'#13#10 +
+        'GivenList: %s'#13#10 +
+        'EvaluatedPair: %s'#13#10 +
+        'ExpectedPair: %s'#13#10,
+        [GivenList, EvaluatedPair, ExpectedPair]
+      )
+    );
+
+    Log(GivenList + '->' + EvaluatedPair);
   end;
 begin
   Log('---Testing List to Pair---');
-  CheckListToPair('(a b c)');
-  CheckListToPair(' ( a  b    c )  ');
-  CheckListToPair('( ( a  b )    c (d e) )  ');
+  CheckListToPair('(a b c)', '(a . (b c))');
+  CheckListToPair(' ( a  b    c )  ', '(a . (b c))');
+  CheckListToPair('( ( a  b )    c (d e) )  ', '(( a  b ) . (c (d e)))');;
+  CheckListToPair('(a )','(a . Nil)');
+  CheckListToPair('()', '(Nil . Nil)');
 end;
 
 procedure TMainTest.Test_EvaluateExpressions;

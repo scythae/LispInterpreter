@@ -22,8 +22,9 @@ type
     Functions_UserDefined: TDictionary<string, TFunctionRec>;
     Functions_BuiltIn: TDictionary<string, TRealization>;
   private
-    FFunction: TSExpression;
-    FArguments: TDictionary<string, TSExpression>;
+//    FFunction: TSExpression;
+//    FArguments: TDictionary<string, TSExpression>;
+    FElements: TList<TSExpression>;
     function GetFunctionName(): string;
     procedure InitFunctionAndArguments();
     procedure CheckFunctionName();
@@ -64,28 +65,13 @@ end;
 procedure TSList.InitFunctionAndArguments();
 var
   Elements: TStringArray;
-
-  procedure InitFunction();
-  begin
-    FFunction := TSExpression.CreateExp(Elements[0]);
-  end;
-
-  procedure InitArguments();
-  var
-    I: Integer;
-  begin
-    FArguments := TDictionary<string, TSExpression>.Create();
-    for I := 1 to Length(Elements) - 1 do
-      FArguments.Add(Elements[I], TSExpression.CreateExp(Elements[I]));
-  end;
+  ElementText: string;
 begin
   Elements := ToElements(Text);
-
-  if Length(Elements) = 0  then
-
   try
-    InitFunction();
-    InitArguments();
+    FElements := TList<TSExpression>.Create();
+    for ElementText in Elements do
+      FElements.Add(TSExpression.CreateExp(ElementText));
   finally
     SetLength(Elements, 0);
   end;
@@ -93,13 +79,11 @@ end;
 
 procedure TSList.FreeFunctionAndArguments();
 var
-  Argument: TSExpression;
+  Element: TSExpression;
 begin
-  FreeAndNil(FFunction);
-
-  for Argument in FArguments.Values do
-    Argument.Free();
-  FreeAndNil(FArguments);
+  for Element in FElements do
+    Element.Free();
+  FreeAndNil(FElements);
 end;
 
 procedure TSList.InitHeadAndTail(const AText: string);
@@ -111,28 +95,34 @@ function TSList.TextAsPair(): string;
 var
   Elements: TStringArray;
 
-  procedure CompileHeadAndTail();
-  var
-    Head: string;
-    Tail: string;
+  procedure JoinHeadAndTail(const Head, Tail: string);
   begin
-    Head := Elements[0];
-    Tail :=
+    Result :=
+      Char_OpeningParenthesis + Head +
+      Char_Space + Char_PairDelimiter + Char_Space +
+      Tail + Char_ClosingParenthesis;
+  end;
+
+  function RestOfElements(): string;
+  begin
+    Result :=
       Char_OpeningParenthesis +
       string.Join(Char_Space, Elements, 1, Length(Elements) - 1) +
       Char_ClosingParenthesis;
+  end;
 
-    Result :=
-      Char_OpeningParenthesis +
-      Head +
-      Char_Space + Char_PairDelimiter + Char_Space +
-      Tail +
-      Char_ClosingParenthesis;
+  procedure CheckElementsAndJoinHeadAndTail();
+  begin
+    case Length(Elements) of
+      0: JoinHeadAndTail(String_AtomNil, String_AtomNil);
+      1: JoinHeadAndTail(Elements[0], String_AtomNil);
+      else JoinHeadAndTail(Elements[0], RestOfElements());
+    end;
   end;
 begin
   Elements := ToElements(Text);
   try
-    CompileHeadAndTail();
+    CheckElementsAndJoinHeadAndTail();
   finally
     SetLength(Elements, 0);
   end;
@@ -148,17 +138,17 @@ begin
   else if FunctionIsBuiltIn() then
     Result := EvaluateBuiltInFunction()
   else
-    RaiseException('Function is not defined: ' + FFunction.Text);
+    RaiseException('Function is not defined: ' + GetFunctionName());
 end;
 
 function TSList.FunctionIsUserDefined(): Boolean;
 begin
-  Result := Functions_UserDefined.ContainsKey(GetRefinedText(FFunction.Text));
+  Result := Functions_UserDefined.ContainsKey(GetFunctionName());
 end;
 
 function TSList.FunctionIsBuiltIn(): Boolean;
 begin
-  Result := Functions_BuiltIn.ContainsKey(GetRefinedText(FFunction.Text));
+  Result := Functions_BuiltIn.ContainsKey(GetFunctionName());
 end;
 
 function TSList.EvaluateUserDefinedFunction(): Variant;
@@ -166,7 +156,7 @@ var
   FunctionRec: TFunctionRec;
   Elements: TStringArray;
 begin
-  if not Functions_UserDefined.TryGetValue(FFunction.Text, FunctionRec) then
+  if not Functions_UserDefined.TryGetValue(GetFunctionName(), FunctionRec) then
     Exit(-1);
 
 //  FunctionRec.Body;
@@ -178,7 +168,7 @@ begin
   SetLength(Elements, 0);
 
 
-  Result := FFunction.Evaluate;
+//  Result := FFunction.Evaluate;
 end;
 
 function TSList.EvaluateBuiltInFunction(): Variant;
@@ -189,9 +179,9 @@ end;
 
 procedure TSList.CheckFunctionName();
 begin
-  if not (FFunction is TSAtom) then
+//  if not (FFunction is TSAtom) then
     raise Exception.Create(
-      'Function name must be an Atom. Current function name is: ' + FFunction.Text
+      'Function name must be an Atom. Current function name is: ' + GetFunctionName()
     );
 end;
 
@@ -200,7 +190,7 @@ var
   ArgumentsNumber: Integer;
   RegisteredArgumentsNumber: Integer;
 begin
-  ArgumentsNumber := FArguments.Count;
+//  ArgumentsNumber := FArguments.Count;
   RegisteredArgumentsNumber := GetExpectedArgumentsNumber();
 
 
@@ -209,7 +199,7 @@ begin
       Format(
         'Function is called with wrong number of arguments:'#13#10 +
         '%s registered with %d arguments, called with %d arguments',
-        [FFunction.Text, RegisteredArgumentsNumber, ArgumentsNumber]
+        [GetFunctionName(), RegisteredArgumentsNumber, ArgumentsNumber]
       )
     );
 end;
@@ -219,7 +209,7 @@ var
   FunctionRec: TFunctionRec;
   Elements: TStringArray;
 begin
-  if not Functions_UserDefined.TryGetValue(FFunction.Text, FunctionRec) then
+  if not Functions_UserDefined.TryGetValue(GetFunctionName(), FunctionRec) then
     Exit(-1);
 
   Elements := ToElements(FunctionRec.Arguments);
@@ -229,12 +219,12 @@ end;
 
 function TSList.FunctionNameIs(AText: string): Boolean;
 begin
-  Result := SameText(GetRefinedText(FFunction.Text), AText);
+  Result := SameText(GetFunctionName(), AText);
 end;
 
 function TSList.GetFunctionName(): string;
 begin
-  Result := GetRefinedText(FFunction.Text);
+  Result := '';//GetRefinedText(FFunction.Text);
 end;
 
 class function TSList.GetRefinedText(const AText: string): string;
