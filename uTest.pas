@@ -64,6 +64,7 @@ begin
   CheckExpression('Q$W', TSAtom);
   CheckExpression('123', TSAtom);
   CheckExpression('-12.3', TSAtom);
+  CheckExpression('6.02E+23', TSAtom);
   CheckExpression('A.A', TSAtom);
   CheckExpression('A A', TSWrong);
   CheckExpression('A(', TSWrong);
@@ -164,6 +165,7 @@ begin
   CheckExpressionValue('1', 1);
   CheckExpressionValue('"1"', '"1"');
   CheckExpressionValue('2.12', 2.12);
+  CheckExpressionValue('6.02E+23', VarAsType(6.02e23, varDouble));
 end;
 
 function TMainTest.TextIsClass(const Text: string;

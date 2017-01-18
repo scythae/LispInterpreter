@@ -3,53 +3,103 @@ unit uSAtom;
 interface
 
 uses
-  SysUtils, Types, uSExpression;
+  SysUtils, Types, Variants,
+
+  uSExpression;
 
 type
+  TAtomType = (atString, atInteger, atFloat, atTrue, atNil, atSymbol);
+
   TSAtom = class(TSExpression)
   private
-    function TryToInt(const AText: string; var Value: Variant): Boolean;
-    function TryToFloat(const AText: string; var Value: Variant): Boolean;
-    function TryToString(const AText: string; var Value: Variant): Boolean;
+    FValue: Variant;
+    FAtomType: TAtomType;
+    function TryToInt(const AText: string): Boolean;
+    function TryToFloat(const AText: string): Boolean;
+    function TryToString(const AText: string): Boolean;
     function TryToVariable(const AText: string; var Value: Variant): Boolean;
+    function TryToNil(const AText: string): Boolean;
+    function TryToTrue(const AText: string): Boolean;
+  protected
+    constructor CreateActual(AText: string); override;
   public
     function Evaluate(): Variant; override;
   end;
 
 implementation
 
+constructor TSAtom.CreateActual(AText: string);
+begin
+  inherited CreateActual(AText);
+
+  AText := GetRefinedText(AText);
+  if not TryToInt(Text) then
+  if not TryToFloat(Text) then
+  if not TryToString(Text) then
+    FAtomType := atSymbol;
+end;
+
 function TSAtom.Evaluate(): Variant;
 begin
-  if not TryToInt(Text, Result) then
-  if not TryToFloat(Text, Result) then
-  if not TryToString(Text, Result) then
+  if FAtomType <> atSymbol then
+    Exit(FValue);
+
   if not TryToVariable(Text, Result) then
     RaiseException('Atom is not defined: ' + Text);
 end;
 
-function TSAtom.TryToInt(const AText: string; var Value: Variant): Boolean;
+function TSAtom.TryToNil(const AText: string): Boolean;
+begin
+  Result := SameText(AText, String_AtomNil);
+  if Result then
+  begin
+    FAtomType := atNil;
+    FValue := Null;
+  end;
+end;
+
+function TSAtom.TryToTrue(const AText: string): Boolean;
+begin
+  Result := SameText(AText, String_AtomTrue);
+  if Result then
+  begin
+    FAtomType := atTrue;
+    FValue := True;
+  end;
+end;
+
+function TSAtom.TryToInt(const AText: string): Boolean;
 var
   AtomInt: Integer;
 begin
   Result := TryStrToInt(AText, AtomInt);
   if Result then
-    Value := AtomInt;
+  begin
+    FAtomType := atInteger;
+    FValue := AtomInt;
+  end;
 end;
 
-function TSAtom.TryToFloat(const AText: string; var Value: Variant): Boolean;
+function TSAtom.TryToFloat(const AText: string): Boolean;
 var
-  AtomExt: Extended;
+  AtomFloat: Extended;
 begin
-  Result := TryStrToFloat(AText, AtomExt);
+  Result := TryStrToFloat(AText, AtomFloat);
   if Result then
-    Value := AtomExt;
+  begin
+    FAtomType := atFloat;
+    FValue := AtomFloat;
+  end;
 end;
 
-function TSAtom.TryToString(const AText: string; var Value: Variant): Boolean;
+function TSAtom.TryToString(const AText: string): Boolean;
 begin
   Result := not AText.Equals(AText.DeQuotedString(Char_AtomstringQuote));
   if Result then
-    Value := AText;
+  begin
+    FAtomType := atString;
+    FValue := AText;
+  end;
 end;
 
 function TSAtom.TryToVariable(const AText: string; var Value: Variant): Boolean;

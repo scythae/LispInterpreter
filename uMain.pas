@@ -52,6 +52,8 @@ begin
   lbHotkeys.MultiSelect := False;
   mInfo.Clear();
 
+//  mInfo.Lines.Add(StrToFloat('6.02E+23').ToString());
+
   with  TMainTest.Create() do
   try
     OnTextOut := AddLine;

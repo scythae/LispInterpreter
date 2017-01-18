@@ -48,6 +48,16 @@ type
     destructor Destroy(); override;
   end;
 
+  TSFunction = class(TSList)
+  protected
+    FArguments: TDictionary<string, TSExpression>;
+    FName: string;
+  public
+    procedure LoadArguments(AArguments: string);
+    property Name: string read FName write FName;
+    destructor Destroy(); override;
+  end;
+
 implementation
 
 constructor TSList.CreateActual(Text: string);
@@ -155,20 +165,18 @@ function TSList.EvaluateUserDefinedFunction(): Variant;
 var
   FunctionRec: TFunctionRec;
   Elements: TStringArray;
+  LFunction: TSFunction;
 begin
   if not Functions_UserDefined.TryGetValue(GetFunctionName(), FunctionRec) then
-    Exit(-1);
+    raise Exception.Create('Function is undefined: ' + GetFunctionName());
 
-//  FunctionRec.Body;
-//  FArguments[]
-
-
-  Elements := ToElements(FunctionRec.Arguments);
-  Result := Length(Elements);
-  SetLength(Elements, 0);
-
-
-//  Result := FFunction.Evaluate;
+  LFunction := TSExpression.CreateExp(FunctionRec.Body) as TSFunction;
+  try
+    LFunction.LoadArguments(FunctionRec.Arguments);
+    Result := LFunction.Evaluate;
+  finally
+    FreeAndNil(LFunction);
+  end;
 end;
 
 function TSList.EvaluateBuiltInFunction(): Variant;
@@ -179,7 +187,7 @@ end;
 
 procedure TSList.CheckFunctionName();
 begin
-//  if not (FFunction is TSAtom) then
+  if DefineSubclassByText(GetFunctionName()) <> TSAtom then
     raise Exception.Create(
       'Function name must be an Atom. Current function name is: ' + GetFunctionName()
     );
@@ -224,7 +232,7 @@ end;
 
 function TSList.GetFunctionName(): string;
 begin
-  Result := '';//GetRefinedText(FFunction.Text);
+  Result := GetTextElementByIndex(Text, 0);
 end;
 
 class function TSList.GetRefinedText(const AText: string): string;
@@ -248,6 +256,41 @@ begin
   Result := FunctionRec.Name;
 end;
 
+{ TSFunction }
+
+destructor TSFunction.Destroy();
+var
+  Argument: TSExpression;
+begin
+  for Argument in FArguments.Values do
+    Argument.Free();
+  FreeAndNil(FArguments);
+
+  inherited;
+end;
+
+procedure TSFunction.LoadArguments(AArguments: string);
+var
+  Elements: TStringArray;
+
+  procedure LoadArgumentsToFunction();
+  var
+    I: Integer;
+  begin
+    for I := Low(Elements) + 1 to High(Elements) do
+      FArguments.Add(
+        Elements[I],
+        TSExpression.CreateExp(Elements[I])
+    );
+  end;
+begin
+  Elements := ToElements(AArguments);
+  try
+    LoadArgumentsToFunction();
+  finally
+    SetLength(Elements, 0);
+  end;
+end;
 
 initialization
   TSList.Functions_UserDefined := TDictionary<string, TFunctionRec>.Create;

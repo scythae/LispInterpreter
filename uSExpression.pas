@@ -15,13 +15,13 @@ type
     FText: string;
     procedure SetText(AText: string); virtual;
     function GetTextRefined(): string;
-//    class function IsNil(const AText: string): Boolean; static;
     class function IsPair(const AText: string): Boolean; static;
     class function IsList(const AText: string): Boolean; static;
-    class function IsNonNilAtom(AText: string): Boolean; static;
+    class function IsAtom(const AText: string): Boolean; static;
     class function FirstAndLastSymbolsAreParentheses(const AText: string): Boolean; static;
     class function TextWithoutFirstAndLastSymbols(const AText: string): string; static;
     class function ExpressionIsCorrect(const AText: string): Boolean;
+    class function IsConstant(const AText: string): Boolean; static;
   protected const
     Char_Space = ' ';
     Char_OpeningParenthesis = '(';
@@ -84,25 +84,17 @@ begin
   AText := GetRefinedText(AText);
 
   if FirstAndLastSymbolsAreParentheses(AText) then
-//    if IsNil(AText) then
-//      Exit(TSAtom)
-//    else
     if IsPair(AText) then
       Exit(TSPair)
     else if IsList(AText) then
       Exit(TSList)
     else
       Exit(TSWrong)
-  else if IsNonNilAtom(AText) then
+  else if IsAtom(AText) then
     Exit(TSAtom)
   else
     Exit(TSWrong);
 end;
-
-//class function TSExpression.IsNil(const AText: string): Boolean;
-//begin
-//  Result := TextWithoutFirstAndLastSymbols(AText).Trim() = '';
-//end;
 
 class function TSExpression.IsPair(const AText: string): Boolean;
 var
@@ -150,13 +142,43 @@ begin
   end;
 end;
 
-class function TSExpression.IsNonNilAtom(AText: string): Boolean;
+class function TSExpression.IsConstant(const AText: string): Boolean;
 var
   ContainsUnquotedSpecialChars: Boolean;
   InnerAtomstringQuotesAreCorrect: Boolean;
   DequotedText: string;
 begin
   if AText.Trim() = Char_PairDelimiter then
+    Exit(False);
+
+//  if AText. then
+
+
+  ContainsUnquotedSpecialChars := AText.IndexOfAnyUnquoted(
+    [Char_Space, Char_OpeningParenthesis, Char_ClosingParenthesis, Char_ExpressionQuote],
+    Char_AtomstringQuote,
+    Char_AtomstringQuote
+  ) <> -1;
+
+  if ContainsUnquotedSpecialChars then
+    Exit(False);
+
+  DequotedText := AText.DeQuotedString(Char_AtomstringQuote);
+  InnerAtomstringQuotesAreCorrect :=
+    AText.Equals(DequotedText) or AText.Equals(DequotedText.QuotedString(Char_AtomstringQuote));
+
+  Result := InnerAtomstringQuotesAreCorrect;
+end;
+
+class function TSExpression.IsAtom(const AText: string): Boolean;
+var
+  ContainsUnquotedSpecialChars: Boolean;
+  InnerAtomstringQuotesAreCorrect: Boolean;
+  DequotedText: string;
+  IsString: Boolean;
+  IsCorrectString: Boolean;
+begin
+  if AText = Char_PairDelimiter then
     Exit(False);
 
   ContainsUnquotedSpecialChars := AText.IndexOfAnyUnquoted(
@@ -169,6 +191,8 @@ begin
     Exit(False);
 
   DequotedText := AText.DeQuotedString(Char_AtomstringQuote);
+  IsString := not AText.Equals(DequotedText);
+
   InnerAtomstringQuotesAreCorrect :=
     AText.Equals(DequotedText) or AText.Equals(DequotedText.QuotedString(Char_AtomstringQuote));
 
