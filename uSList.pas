@@ -3,7 +3,7 @@ unit uSList;
 interface
 
 uses
-  SysUtils, Types, Generics.Collections,
+  SysUtils, Types, Generics.Collections, Variants,
 
   uSExpression, uSAtom, uSPair;
 
@@ -20,23 +20,22 @@ type
     TRealization = function (): Variant of object;
   private class var
     Functions_UserDefined: TDictionary<string, TFunctionRec>;
-    Functions_BuiltIn: TDictionary<string, TRealization>;
   private
-//    FFunction: TSExpression;
-//    FArguments: TDictionary<string, TSExpression>;
-    FElements: TList<TSExpression>;
+    FHeadElement: TSExpression;
+    FTailElements: TList<TSExpression>;
     function GetFunctionName(): string;
-    procedure InitFunctionAndArguments();
+    procedure InitListElements();
+    procedure FreeListElements();
     procedure CheckFunctionName();
-    function FunctionIsUserDefined(): Boolean;
     function GetExpectedArgumentsNumber(): Integer;
-    procedure FreeFunctionAndArguments();
     function FunctionNameIs(AText: string): Boolean;
-    function DefineFunction(): Variant;
     procedure CheckFunctionArgumentsNumber();
-    function FunctionIsBuiltIn(): Boolean;
-    function EvaluateBuiltInFunction(): Variant;
-    function EvaluateUserDefinedFunction(): Variant;
+    function EvaluatedBuiltIn(var Value: Variant): Boolean;
+    function EvaluatedUserDefined(var Value: Variant): Boolean;
+    function Function_Defun(): Variant;
+    function Function_Add(): Variant;
+    function Function_Multiply: Variant;
+    procedure CheckArgumentsNumber(NumberOfRegistered, NumberOfActual: Integer);
   protected
     constructor CreateActual(Text: string); override;
     class function GetRefinedText(const AText: string): string; override;
@@ -63,37 +62,46 @@ implementation
 constructor TSList.CreateActual(Text: string);
 begin
   inherited CreateActual(Text);
-  InitFunctionAndArguments();
+  InitListElements();
 end;
 
 destructor TSList.Destroy();
 begin
-  FreeFunctionAndArguments();
+  FreeListElements();
   inherited;
 end;
 
-procedure TSList.InitFunctionAndArguments();
+procedure TSList.InitListElements();
 var
-  Elements: TStringArray;
-  ElementText: string;
+  StrElements: TStringArray;
+  HeadText: string;
+  I: Integer;
 begin
-  Elements := ToElements(Text);
+  FTailElements := TList<TSExpression>.Create();
+
+  StrElements := ToElements(Text);
+  if Length(StrElements) = 0 then
+    HeadText := String_AtomNil
+  else
+    HeadText := StrElements[Low(StrElements)];
+
   try
-    FElements := TList<TSExpression>.Create();
-    for ElementText in Elements do
-      FElements.Add(TSExpression.CreateExp(ElementText));
+    FHeadElement := TSExpression.CreateExp(HeadText);
+    for I := Low(StrElements) + 1 to High(StrElements) do
+      FTailElements.Add(TSExpression.CreateExp(StrElements[I]));
   finally
-    SetLength(Elements, 0);
+    SetLength(StrElements, 0);
   end;
 end;
 
-procedure TSList.FreeFunctionAndArguments();
+procedure TSList.FreeListElements();
 var
   Element: TSExpression;
 begin
-  for Element in FElements do
+  for Element in FTailElements do
     Element.Free();
-  FreeAndNil(FElements);
+  FreeAndNil(FTailElements);
+  FreeAndNil(FHeadElement);
 end;
 
 procedure TSList.InitHeadAndTail(const AText: string);
@@ -141,48 +149,10 @@ end;
 function TSList.Evaluate(): Variant;
 begin
   CheckFunctionName();
-  CheckFunctionArgumentsNumber();
 
-  if FunctionIsUserDefined() then
-    Result := EvaluateUserDefinedFunction()
-  else if FunctionIsBuiltIn() then
-    Result := EvaluateBuiltInFunction()
-  else
-    RaiseException('Function is not defined: ' + GetFunctionName());
-end;
-
-function TSList.FunctionIsUserDefined(): Boolean;
-begin
-  Result := Functions_UserDefined.ContainsKey(GetFunctionName());
-end;
-
-function TSList.FunctionIsBuiltIn(): Boolean;
-begin
-  Result := Functions_BuiltIn.ContainsKey(GetFunctionName());
-end;
-
-function TSList.EvaluateUserDefinedFunction(): Variant;
-var
-  FunctionRec: TFunctionRec;
-  Elements: TStringArray;
-  LFunction: TSFunction;
-begin
-  if not Functions_UserDefined.TryGetValue(GetFunctionName(), FunctionRec) then
-    raise Exception.Create('Function is undefined: ' + GetFunctionName());
-
-  LFunction := TSExpression.CreateExp(FunctionRec.Body) as TSFunction;
-  try
-    LFunction.LoadArguments(FunctionRec.Arguments);
-    Result := LFunction.Evaluate;
-  finally
-    FreeAndNil(LFunction);
-  end;
-end;
-
-function TSList.EvaluateBuiltInFunction(): Variant;
-begin
-  if FunctionNameIs('defun') then
-    DefineFunction();
+  if not EvaluatedUserDefined(Result) then
+    if not EvaluatedBuiltIn(Result) then
+      RaiseException('Function is not defined: ' + GetFunctionName());
 end;
 
 procedure TSList.CheckFunctionName();
@@ -193,21 +163,79 @@ begin
     );
 end;
 
+function TSList.EvaluatedUserDefined(var Value: Variant): Boolean;
+var
+  FunctionRec: TFunctionRec;
+  Elements: TStringArray;
+  LFunction: TSFunction;
+begin
+  Result := Functions_UserDefined.TryGetValue(GetFunctionName(), FunctionRec);
+  if not Result then
+    Exit();
+
+  LFunction := TSExpression.CreateExp(FunctionRec.Body) as TSFunction;
+  try
+    LFunction.LoadArguments(FunctionRec.Arguments);
+    Value := LFunction.Evaluate;
+  finally
+    FreeAndNil(LFunction);
+  end;
+end;
+
+function TSList.EvaluatedBuiltIn(var Value: Variant): Boolean;
+begin
+  Result := True;
+
+  if FunctionNameIs('defun') then
+    Value := Function_Defun()
+  else if FunctionNameIs('+') then
+    Value := Function_Add()
+  else if FunctionNameIs('*') then
+    Value := Function_Multiply()
+  else if FunctionNameIs('Nil') then
+    Value := Null
+
+  else
+    Result := False;
+end;
+
+function TSList.Function_Add(): Variant;
+var
+  Element: TSExpression;
+begin
+  Result := 0;
+  for Element in FTailElements do
+    Result := Result + Element.Evaluate();
+end;
+
+function TSList.Function_Multiply(): Variant;
+var
+  Element: TSExpression;
+begin
+  Result := 1;
+  for Element in FTailElements do
+    Result := Result * Element.Evaluate();
+end;
+
 procedure TSList.CheckFunctionArgumentsNumber();
 var
-  ArgumentsNumber: Integer;
   RegisteredArgumentsNumber: Integer;
+  ArgumentsNumber: Integer;
 begin
-//  ArgumentsNumber := FArguments.Count;
   RegisteredArgumentsNumber := GetExpectedArgumentsNumber();
+  ArgumentsNumber := FTailElements.Count;
 
+  CheckArgumentsNumber(RegisteredArgumentsNumber, ArgumentsNumber)
+end;
 
-  if RegisteredArgumentsNumber <> ArgumentsNumber then
+procedure TSList.CheckArgumentsNumber(NumberOfRegistered, NumberOfActual: Integer);
+begin
+  if NumberOfRegistered <> NumberOfActual then
     RaiseException(
       Format(
         'Function is called with wrong number of arguments:'#13#10 +
         '%s registered with %d arguments, called with %d arguments',
-        [GetFunctionName(), RegisteredArgumentsNumber, ArgumentsNumber]
+        [GetFunctionName(), NumberOfRegistered, NumberOfActual]
       )
     );
 end;
@@ -232,7 +260,7 @@ end;
 
 function TSList.GetFunctionName(): string;
 begin
-  Result := GetTextElementByIndex(Text, 0);
+  Result := FHeadElement.Text;
 end;
 
 class function TSList.GetRefinedText(const AText: string): string;
@@ -240,7 +268,7 @@ begin
   Result := inherited.ToLower();
 end;
 
-function TSList.DefineFunction(): Variant;
+function TSList.Function_Defun(): Variant;
 var
   FunctionRec: TFunctionRec;
   RefinedText: string;
@@ -294,7 +322,6 @@ end;
 
 initialization
   TSList.Functions_UserDefined := TDictionary<string, TFunctionRec>.Create;
-
 finalization
   FreeAndNil(TSList.Functions_UserDefined);
 

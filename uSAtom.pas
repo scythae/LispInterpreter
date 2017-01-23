@@ -39,15 +39,6 @@ begin
     FAtomType := atSymbol;
 end;
 
-function TSAtom.Evaluate(): Variant;
-begin
-  if FAtomType <> atSymbol then
-    Exit(FValue);
-
-  if not TryToVariable(Text, Result) then
-    RaiseException('Atom is not defined: ' + Text);
-end;
-
 function TSAtom.TryToNil(const AText: string): Boolean;
 begin
   Result := SameText(AText, String_AtomNil);
@@ -102,9 +93,25 @@ begin
   end;
 end;
 
+function TSAtom.Evaluate(): Variant;
+begin
+  if FAtomType <> atSymbol then
+    Exit(FValue);
+
+  if not TryToVariable(Text, Result) then
+    RaiseException('Atom is not defined: ' + Text);
+end;
+
 function TSAtom.TryToVariable(const AText: string; var Value: Variant): Boolean;
 begin
-  Result := False;
+  Result := True;
+  if SameText(Atext, String_AtomNil) then
+    Value := Null
+  else if SameText(Atext, String_AtomTrue) then
+    Value := True
+    
+  else
+    Result := False;
 end;
 
 end.

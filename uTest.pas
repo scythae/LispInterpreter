@@ -166,6 +166,12 @@ begin
   CheckExpressionValue('"1"', '"1"');
   CheckExpressionValue('2.12', 2.12);
   CheckExpressionValue('6.02E+23', VarAsType(6.02e23, varDouble));
+  CheckExpressionValue('(+ 2 3)', 5);
+  CheckExpressionValue('(* 2 3)', 6);
+  CheckExpressionValue('(+ 2 3 (* 2 3))', 11);
+  CheckExpressionValue('()', Null);
+  CheckExpressionValue('Nil', Null);
+  CheckExpressionValue('T', True);
 end;
 
 function TMainTest.TextIsClass(const Text: string;
